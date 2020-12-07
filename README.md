@@ -37,6 +37,12 @@ all combinational circuits
 
 #### Algo.
 
+Abstract
+我們會先利用DFS把整個電路的每個gate, 每個pin的時間計算好。
+然後我們會從最長的path開始確認，每次確認一個 longestPath。
+每次確認一個 longestPath時，會先找出已經可知的值，刪去會有 conflict 的部分。
+再來給 input 1/0來確認每個gate 的合理性，經過每個gate時會做 forward的動作來讓他可經過的每個pin有無conflict，有conflict時就做 backtrace 將其gate 的紀錄刪除。
+
 Void traceTimeInterval()
  用於找出每個 gate 的時間區間。
 一開始是想用 BFS 去跑，後來發現電路並不是一層一層的結構，於是改從
