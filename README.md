@@ -37,6 +37,72 @@ all combinational circuits
 
 #### Algo.
 
+Void traceTimeInterval()
+ 用於找出每個 gate 的時間區間。
+一開始是想用 BFS 去跑，後來發現電路並不是一層一層的結構，於是改從
+output 使用 DFS 走回去。
+個人覺得這個發現還蠻特別的，因為之前覺得這種東西裡所單然可以用 BFS
+跑，出現 error 的時候還困惑了很久。
+Time Interval 使用在之後會有每個 gate 會有 uppertime 和 lowertime，以及
+uppertime 來的那個 pin，代表走到這個 gate 可能的最大時間和可能的最短
+時間，用來在 settruepathvalue 跑一個 path 的時候可以對時間做簡單的排除 ，
+以及在找 longestPath 的時候可以先排除不符合時間限制的 path，這樣可以
+大大的加快速度。
+
+Void renew()
+一開始本來想設定一個 graph，後來因為一個 graph 每次重新設定都要走每個
+gate 和每個變數，我們覺得這樣會比直接重新設定每個 gate 慢，後來想說可以
+用 global variable，因為要 renew 時都是要換一個 path 的時候，這樣我們就可
+以看 global variable 和 pin 裡的 variable 相不相等來辨識我們想要的資訊，那換
+一個 Path 的時候就將 global variable +1 。
+
+
+
+bool Forward ( GatePin* pin , unsigned value , vector<GatePin* > & record)
+ 這個 function 是用來判斷目前已知時間和邏輯值的電路會不會有 conflict 的情
+形，如果 conflict 的話，現在的這組 input 不可能為 true path 的 PI set，會回傳
+false，並且需要將改過的值通過 undo()洗掉，如果沒有 conflict 的話，會回傳
+true。Forward()會收到一個 PI 和它會被設定成的值，即 0 或 1，將 pin 的 logic
+設定成 value 值後，對於這個 pin 所有的 fanout gate 去判斷會不會有 conflict，
+沒有 conflict 且 gate 的 output 可知道的話 recursive 呼叫 forward()，GatePin*的
+地方傳入剛才檢查的 gate 的 output pin，以此類推，即可檢查完和這個 PI 有相
+關的 path；若 recursive 呼叫的 Forward()回傳 false 的話，代表此條 path 有
+conflict，要將它記住並同樣回傳 false。record 則是將有改過時間或邏輯值的
+pin 記錄下來。
+
+會遇到的情況可以分為兩類，一個是正在經過的 gate 的 output 本來就被設定
+有值，一個是沒有被 travel 過的：
+
+1. Gate output untraveled
+若正在經過的 gate 為
+(1) NOT gate
+ 將 output pin 的值設為 input pin 的相反，並且時間為 input pin 的時間
+加一，rec 呼叫 forward 將值傳下去。
+(2) NAND or NOR gate 而且 offpin 有值
+ 時間上，如果兩個 input pin 都是 controlling value，則早到的為 true
+path，output pin 的時間就為早到的時間加一；若兩個 input pin 都是
+non-controlling value，則晚到的為 true path，output pin 的時間為晚到的
+時間加一；若一個 controlling 一個 non-controlling，controlling value 的
+pin 為 true path。
+ 邏輯上，若兩個 input 有其中之一為 controlling，設定 output 為 noncontrolling，若非，output 為 controlling，並且將 output 值以 recursive 的
+方式傳下去。
+2. Gate output traveled
+ 若 output 被 travel 過了，代表時間和邏輯都已被設定，且它之後的所有
+fanout gate 也都被 travel 過，所以只要判斷是否和新的輸入有 conflict 的情
+形。如果正在經過的 gate 為
+
+(1) NAND or NOR gate 而且 offpin 有值
+ 和上面敘述的判斷條件一樣，時間上的判斷例如：若兩個 input pin 都
+是 controlling value，則早到的為 true path，output pin 的時間卻被設定
+為晚到的 pin 的時間加一，此時就發生 conflict；邏輯上的判斷例如：兩
+個 input 其中之一為 controlling，output 卻被設定為 controlling value，發
+生 conflict，回傳 false。
+(2) NAND or NOR gate 而且 offpin 沒有值
+ 如果 pin 的邏輯值是 controlling，output 卻為 controlling，conflict 亦會
+發生。
+void undo(vector<GatePin* > record)
+ 當這個 function 被呼叫時，會傳入被改過 pin 的 vector，並將這些 pin 設為
+untraveled。
 
 
 #### Data Structure.
